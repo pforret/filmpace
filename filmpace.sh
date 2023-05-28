@@ -50,8 +50,7 @@ flag|q|quiet|no output
 flag|v|verbose|also show debug messages
 flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|folder for log files |$HOME/log/$script_prefix
-option|t|tmp_dir|folder for temp files|/tmp/$script_prefix
-option|o|out_dir|output folder|frames
+option|t|tmp_dir|folder for temp files|tmp
 option|l|LEVEL|sensitivity level|0.25
 choice|1|action|action to perform|detect,action2,check,env,update
 param|?|input|input file
@@ -69,19 +68,25 @@ Script:main() {
 
   case "${action,,}" in
     detect)
+      local seconds scenes uniq out_dir
       #TIP: use «$script_prefix detect» to ...
       #TIP:> $script_prefix detect
       [[ ! -f "$input" ]] && IO:die "input [$input] does not exist"
+      IO:print "Input video      : $(basename "$input")"
+
+      uniq=$(echo "$input-$LEVEL" | Str:digest 6)
+      out_dir="$tmp_dir/$uniq"
+
       [[ ! -d "$out_dir" ]] && mkdir -p "$out_dir"
       seconds=$(video_length "$input")
-      IO:success "Video length: $seconds seconds"
+      IO:print "Video length     : $seconds seconds"
 
       ffmpeg -i "$input" -vf "select='gt(scene,${LEVEL})'" -vsync vfr "$out_dir"/frame-%6d.jpg &> /dev/null
       scenes=$(find "$out_dir" -name "frame-0*.jpg" | wc -l)
       scenes=$((scenes + 1))
-      IO:success "Scenes detected: $scenes"
+      IO:print "Scenes detected  : $scenes"
       # rm -f "$out_dir"/frame-*.jpg
-      IO:success "Seconds per scene: $(bc <<< "scale=2; $seconds/$scenes") sec/scene (@ sensitivity $LEVEL)"
+      IO:print "Film pace        : $(bc <<< "scale=2; $seconds/$scenes") sec/scene (@ sensitivity $LEVEL)"
 
       ;;
 
